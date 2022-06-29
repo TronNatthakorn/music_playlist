@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  node_express_typescript:
+    image: node:18-alpine
+    command: sh -c "npm install && npm run dev"
+    ports:
+      - 8000:8000
+    working_dir: /app
+    volumes:
+      - ./:/app
+      - ./secure:/app/mongo_db # Unmount DB from ./
+    container_name: NodeExpressTypeScriptContainer
+
+  mongodb:
+    image: mongo:4.2
+    ports:
+      - 27017:27017
+    volumes: 
+      - ./mongo_db:/data
+    container_name: MongoDBContainer
+    networks:
+      default:
+        aliases:
+          - mongodb_host

@@ -1,0 +1,251 @@
+<html>
+    <head>
+        <title>Music Playlist</title>
+        <style>
+            .header_area{
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+                padding-bottom: 10px;
+            }
+            .playlist_area{
+                display: flex;
+                flex-flow: wrap;
+                flex-direction: row;
+                padding-top: 10px;
+            }
+            .playlist_box {
+                width : 90%;
+                border: 2px solid lightgreen;
+                margin-left: 4px;
+                padding: 5px;
+            }
+            .modal {
+                display: none;
+                position: fixed;
+                z-index: 2;
+                left: 0;
+                top: 0;
+                padding-top: 100px;
+                width: 100%;
+                height: 100%;
+                overflow: auto;
+                background-color: rgba(0,0,0,0.4);
+            }
+            .modal-content {
+                background-color: #fefefe;
+                margin: auto;
+                padding: 20px;
+                border: 1px solid #888;
+                width: 80%;
+            }
+
+            @media only screen and (min-width: 750px) {
+                .playlist_box {
+                    width : 30%;
+                }
+            }
+        </style>
+        <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+        <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+        <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+        <script type="text/javascript"></script>
+        <script type="text/babel">
+            const useState = React.useState
+            const useEffect = React.useEffect
+            const useContext = React.useContext
+            const Context = React.createContext({})
+            const { Provider } = Context
+
+            const modal = document.getElementById("myModal");
+            const loading = () => { modal.style.display = "block" }
+            const loaded = () => { modal.style.display = "none" }
+
+            async function initPlayList (cb = () => {}) {
+                loading()
+                let response = await fetch('/get_all_playlist')
+                response = await response.json()
+                await loaded()
+                cb(response)
+            }
+
+            async function syncPlayList(obj){
+                loading()
+                let response = await fetch('/sync_all_playlist', {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(obj)
+                });
+                response = await response.json()
+                await loaded()
+            }
+
+            const App = () => {
+                const [didMount, componentDidMount] = useState(false)
+                const [searchText, setSearchText] = useState('')
+                const [playList, setPlayList] = useState([])
+
+                useEffect(() => {
+                    if(!didMount){
+                        initPlayList(setPlayList)
+                        componentDidMount(true)
+                    }
+                })
+
+                return <Provider value={{ didMount, searchText, setSearchText, playList, setPlayList }}>
+                    <HeaderArea />
+                    <hr />
+                    <PlayListArea />
+                </Provider>
+            }
+
+            const HeaderArea = () => {
+                const { searchText, setSearchText, playList, setPlayList } = useContext(Context)
+
+                const onChangeSeartText = ({ target: { value } }) => { 
+                    setSearchText(value)
+                }
+
+                const onClickCreatePlayList = () => {
+                    let playListName = prompt('New PlayList Name')
+
+                    if(playListName && playListName.trim()){
+                        if(playListName.length >= 20){
+                            return alert('PlayList Name should not more than 20 alphabetic.')
+                        }
+
+                        playListName = playListName.trim()
+                        playListName = playListName.charAt(0).toUpperCase() + playListName.slice(1)
+
+                        const playListUpdated = [...playList, { id: `${(new Date().getTime())}`, name: playListName, song_list: [] } ]
+
+                        setPlayList(playListUpdated)
+                        syncPlayList(playListUpdated)
+                    }
+                }
+
+                return <div className="header_area">
+                    <h1>Music Play List</h1>
+                    <input type="text" placeholder="Search Song from Playlist" value={searchText} onChange={onChangeSeartText} /><br/>
+                    <button onClick={onClickCreatePlayList}>Create Playlist</button>
+                </div>
+            }
+
+            const PlayListArea = () => {
+                const { playList, setPlayList } = useContext(Context)
+
+                const PlayListBox = ({children}) => (
+                    <div className="playlist_box">
+                        {children}
+                    </div>
+                )
+
+                return <div className="playlist_area">
+                    {
+                        playList.map((playListObj, indexArrayPlayList) => (
+                            <PlayListBox key={playListObj.id}>
+                                <PlayListBoxHeader {...{indexArrayPlayList}} />
+                                <br/>
+                                {
+                                    playListObj.song_list.map((song, indexArraySong) => (
+                                        <PlayListBoxEachSong key={indexArraySong} {...{song, indexArraySong, indexArrayPlayList}} />
+                                    ))
+                                }
+                            </PlayListBox>
+                        ))
+                    }
+                </div>
+            }
+
+            const PlayListBoxHeader = ({ indexArrayPlayList }) => {
+                const { playList, setPlayList, setSearchText } = useContext(Context)
+                const playListName = playList[indexArrayPlayList].name
+
+                const addSong = () => {
+                    let newSongName = prompt('New Song Name', '')
+
+                    if(newSongName && newSongName.trim()) {
+                        playList[indexArrayPlayList].song_list.push(newSongName.trim())
+
+                        const playListUpdated = [...playList]
+
+                        setSearchText('') // Let user see song that just added
+                        setPlayList(playListUpdated)
+                        syncPlayList(playListUpdated)
+                    }
+                }
+
+                const deletePlayList = () => {
+                    playList.splice(indexArrayPlayList, 1)
+
+                    const playListUpdated = [...playList]
+
+                    setPlayList(playListUpdated)
+                    syncPlayList(playListUpdated)
+                }
+
+                return <div style={{ display: 'flex', flexDirection: 'row' }}>
+                    <b style={{ width: '50%' }}>{playListName}</b>
+                    <button onClick={addSong}>+ Song</button>&nbsp;
+                    <button onClick={deletePlayList}>Delete PlayList</button>
+                </div>
+            }
+
+            const PlayListBoxEachSong = ({ song, indexArraySong, indexArrayPlayList }) => {
+                const { playList, searchText, setPlayList, setSearchText } = useContext(Context)
+                const isShowSong = ((song).toLowerCase().includes(searchText.toLowerCase()) || searchText === '')
+
+                const onClickEditSong = () => {
+                    let editSong = prompt('Edit Song', song)
+
+                    if(editSong && editSong.trim() && editSong.trim() !== song.trim()){
+                        playList[indexArrayPlayList].song_list[indexArraySong] = editSong
+
+                        const playListUpdated = [...playList]
+
+                        setSearchText('') // Let user see song that just edited
+                        setPlayList(playListUpdated)
+                        syncPlayList(playListUpdated)
+                    }
+                }
+
+                const onClickRemoveSong = () => {
+                    playList[indexArrayPlayList].song_list.splice(indexArraySong, 1)
+
+                    const playListUpdated = [...playList]
+
+                    setPlayList(playListUpdated)
+                    syncPlayList(playListUpdated)
+                }
+
+                return <div style={{ display: 'flex', flexDirection: 'row' }}>
+                    {
+                        isShowSong && (<>
+                            <b style={{ width: '50%' }}>
+                                - <a target='_blank' href={`https://www.youtube.com/results?search_query=${song.replaceAll(' ', '+')}`}>{song}</a>
+                            </b>
+                            <button onClick={onClickEditSong}>Edit</button>&nbsp;
+                            <button onClick={onClickRemoveSong}>Remove</button>
+                        </>)
+                    }
+                </div>
+            }
+
+            const root = ReactDOM.createRoot(document.getElementById("root"))
+            root.render(<App />)
+        </script>
+    </head>
+    <body>
+        <div id="root"></div>
+
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <p>LOADING .....</p>
+            </div>
+        </div>
+    </body>
+</html>
