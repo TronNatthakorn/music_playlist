@@ -5,7 +5,7 @@ import { InsertManyResult, MongoClient } from 'mongodb'
 
 dotenv.config()
 
-const { 
+const {
   PORT_EXPRESS = '8000',
   PORT_MONGO = '27017',
   DB_NAME = 'music_play_list_db',
@@ -18,19 +18,10 @@ const client = new MongoClient(`mongodb://MongoDBContainer:${PORT_MONGO}/`)
 async function testConnectionDB(cb: Function){
   console.log('Connecting... to MongoDB')
   await client.connect()
-
-  const db = client.db(DB_NAME)
-  const collectionAll = await db.listCollections().toArray();
-  const isExistCollection = collectionAll.some(c => c.name === COLLECTION_NAME);
-
-  if(!isExistCollection){
-    db.createCollection(COLLECTION_NAME)
-  }
-
   console.log('Connected to MongoDB Success')
   cb()
   client.close()
-} 
+}
 
 async function getAllPlayList() {
   await client.connect()
@@ -86,4 +77,3 @@ app.listen(PORT_EXPRESS, async () => {
     console.log(`Music PlayList is running at http://localhost:${PORT_EXPRESS}`)
   })
 });
-
