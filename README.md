@@ -2,7 +2,7 @@
 
 ## How to run
 ```bash 
-docker pull node:18-alpine; docker pull mongo:4-2;
+docker pull node:18-alpine; docker pull mongo:4.2;
 docker-compose up -d; docker-compose logs -f -t;
 
 ```
