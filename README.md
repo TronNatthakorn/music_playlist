@@ -1,6 +1,8 @@
 # Music Playlist
 
 ## How to run
+- cd to Project via Powershell (Windows) or Terminal (Mac) and run.
+
 ```bash 
 docker pull node:18-alpine; docker pull mongo:4.2;
 docker-compose up -d; docker-compose logs -f -t;
